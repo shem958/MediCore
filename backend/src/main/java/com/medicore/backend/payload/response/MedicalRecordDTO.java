@@ -9,6 +9,7 @@ public class MedicalRecordDTO {
     private String diagnosis;
     private String prescription;
     private String notes;
+    private String attachmentUrl;
     private LocalDateTime createdAt;
 
     // Getters and Setters
@@ -22,6 +23,8 @@ public class MedicalRecordDTO {
     public void setPrescription(String prescription) { this.prescription = prescription; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getAttachmentUrl() { return attachmentUrl; }
+    public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

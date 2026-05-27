@@ -55,6 +55,7 @@ public class MedicalRecordController {
             dto.setDiagnosis(record.getDiagnosis());
             dto.setPrescription(record.getPrescription());
             dto.setNotes(record.getNotes());
+            dto.setAttachmentUrl(record.getAttachmentUrl());
             dto.setCreatedAt(record.getCreatedAt());
             return dto;
         }).collect(Collectors.toList());
@@ -80,6 +81,7 @@ public class MedicalRecordController {
                 request.getPrescription(),
                 request.getNotes()
         );
+        record.setAttachmentUrl(request.getAttachmentUrl());
 
         medicalRecordRepository.save(record);
 

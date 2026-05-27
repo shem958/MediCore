@@ -18,7 +18,11 @@ spring:
     redis:
       host: localhost
       port: 6380
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
-jwt:
-  secret: averylongsecretkeyforjwtsignaturethatneedstobeatleast256bitslong12345
-  expirationMs: 86400000 # 24 hours
+app:
+  jwtSecret: "VGhpc0lzQVNlY3JldEtleUZvckpXVEF1dGhlbnRpY2F0aW9uQW5kSXRTaG91bGRCZUxvbmdFbm91Z2hUb0JlU2VjdXJl"
+  jwtExpirationMs: 86400000

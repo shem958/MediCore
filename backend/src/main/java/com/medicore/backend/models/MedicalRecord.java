@@ -32,6 +32,9 @@ public class MedicalRecord {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "attachment_url")
+    private String attachmentUrl;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -61,6 +64,8 @@ public class MedicalRecord {
     public void setPrescription(String prescription) { this.prescription = prescription; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getAttachmentUrl() { return attachmentUrl; }
+    public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

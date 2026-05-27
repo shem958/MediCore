@@ -86,6 +86,9 @@ public class InvoiceController {
         return ResponseEntity.ok(mapToDTO(invoices));
     }
 
+    @Autowired
+    com.medicore.backend.services.EmailService emailService;
+
     @PutMapping("/{id}/pay")
     @PreAuthorize("hasRole('PATIENT') or hasRole('ADMIN')")
     public ResponseEntity<?> simulatePayment(@PathVariable UUID id) {
@@ -102,7 +105,46 @@ public class InvoiceController {
         invoice.setStatus("PAID");
         invoiceRepository.save(invoice);
 
+        // Send Email
+        String emailBody = String.format("Dear %s,\n\nWe have successfully received your payment of $%s for your appointment with Dr. %s on %s.\n\nThank you for choosing MediCore Hospital.",
+                invoice.getPatient().getUser().getFirstName(),
+                invoice.getAmount().toString(),
+                invoice.getAppointment().getDoctor().getLastName(),
+                invoice.getAppointment().getSchedule().getAvailableDate().toString());
+                
+        emailService.sendEmail(invoice.getPatient().getUser().getEmail(), "Payment Receipt", emailBody);
+
         return ResponseEntity.ok(new MessageResponse("Payment successful!"));
+    }
+
+    @PostMapping("/mpesa/stk-push")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<?> simulateMpesaStkPush(@Valid @RequestBody com.medicore.backend.payload.request.MpesaPaymentRequest request) {
+        Optional<Invoice> invoiceOpt = invoiceRepository.findById(request.getInvoiceId());
+        if (invoiceOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Invoice not found"));
+        }
+
+        Invoice invoice = invoiceOpt.get();
+        if (invoice.getStatus().equals("PAID")) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Invoice is already paid"));
+        }
+
+        // Simulate successful STK Push processing delay and success
+        invoice.setStatus("PAID");
+        invoice.setPaymentMethod("M-PESA");
+        invoiceRepository.save(invoice);
+
+        // Send Email
+        String emailBody = String.format("Dear %s,\n\nWe have successfully received your M-PESA payment of KES %s for your appointment with Dr. %s on %s.\n\nThank you for choosing MediCore Hospital.",
+                invoice.getPatient().getUser().getFirstName(),
+                invoice.getAmount().toString(),
+                invoice.getAppointment().getDoctor().getLastName(),
+                invoice.getAppointment().getSchedule().getAvailableDate().toString());
+                
+        emailService.sendEmail(invoice.getPatient().getUser().getEmail(), "M-PESA Payment Receipt", emailBody);
+
+        return ResponseEntity.ok(new MessageResponse("M-Pesa Payment successful!"));
     }
 
     private List<InvoiceDTO> mapToDTO(List<Invoice> invoices) {

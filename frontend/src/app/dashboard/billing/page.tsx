@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { Box, Container, Typography, Paper, Grid, Card, CardContent, Button, CircularProgress, Alert, Chip } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Card, CardContent, Button, CircularProgress, Alert, Chip, Dialog, DialogTitle, DialogContent, DialogContentText, TextField, DialogActions, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import api from '@/services/api';
 
 interface Invoice {
@@ -24,7 +24,13 @@ export default function PatientBilling() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  
+  // Payment Modal State
+  const [openPaymentModal, setOpenPaymentModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState('MPESA');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'PATIENT') {
@@ -47,19 +53,49 @@ export default function PatientBilling() {
     }
   };
 
-  const handlePay = async (invoiceId: string) => {
-    setProcessingId(invoiceId);
+  const handleOpenPaymentModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentMethod('MPESA');
+    setPhoneNumber('');
+    setOpenPaymentModal(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setOpenPaymentModal(false);
+    setSelectedInvoice(null);
+  };
+
+  const handleProcessPayment = async () => {
+    if (!selectedInvoice) return;
+    
+    setProcessingPayment(true);
     setError(null);
     setPaymentSuccess(null);
+    
     try {
-      await api.put(`/invoices/${invoiceId}/pay`);
-      setPaymentSuccess("Payment successful! Thank you.");
-      // Update local state to reflect payment
-      setInvoices(invoices.map(inv => inv.id === invoiceId ? { ...inv, status: 'PAID' } : inv));
+      if (paymentMethod === 'MPESA') {
+        if (!phoneNumber) {
+          setError("Phone number is required for M-Pesa");
+          setProcessingPayment(false);
+          return;
+        }
+        await api.post(`/invoices/mpesa/stk-push`, {
+          invoiceId: selectedInvoice.id,
+          phoneNumber: phoneNumber
+        });
+        setPaymentSuccess("M-Pesa payment processed successfully!");
+      } else {
+        // Fallback to simulate regular payment for other methods (mock)
+        await api.put(`/invoices/${selectedInvoice.id}/pay`);
+        setPaymentSuccess(`Payment via ${paymentMethod} successful!`);
+      }
+      
+      setInvoices(invoices.map(inv => inv.id === selectedInvoice.id ? { ...inv, status: 'PAID' } : inv));
+      handleClosePaymentModal();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Payment failed');
     } finally {
-      setProcessingId(null);
+      setProcessingPayment(false);
     }
   };
 
@@ -94,7 +130,7 @@ export default function PatientBilling() {
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                     <Typography variant="h6" fontWeight="bold">
-                      ${inv.amount.toFixed(2)}
+                      KES {inv.amount.toFixed(2)}
                     </Typography>
                     <Chip 
                       label={inv.status} 
@@ -119,10 +155,9 @@ export default function PatientBilling() {
                       color="primary" 
                       fullWidth 
                       sx={{ mt: 3 }}
-                      disabled={processingId === inv.id}
-                      onClick={() => handlePay(inv.id)}
+                      onClick={() => handleOpenPaymentModal(inv)}
                     >
-                      {processingId === inv.id ? 'Processing...' : 'Pay Now'}
+                      Pay Now
                     </Button>
                   )}
                 </CardContent>
@@ -131,6 +166,52 @@ export default function PatientBilling() {
           ))}
         </Grid>
       )}
+
+      {/* Payment Modal */}
+      <Dialog open={openPaymentModal} onClose={handleClosePaymentModal}>
+        <DialogTitle>Complete Payment</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            You are paying KES {selectedInvoice?.amount.toFixed(2)} for your appointment on {selectedInvoice?.appointmentDate}.
+          </DialogContentText>
+          
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <InputLabel>Payment Method</InputLabel>
+            <Select
+              value={paymentMethod}
+              label="Payment Method"
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <MenuItem value="MPESA">M-Pesa (STK Push)</MenuItem>
+              <MenuItem value="CASH">Cash at Reception</MenuItem>
+              <MenuItem value="INSURANCE">Insurance Claim</MenuItem>
+              <MenuItem value="BANK_TRANSFER">Bank Transfer</MenuItem>
+            </Select>
+          </FormControl>
+
+          {paymentMethod === 'MPESA' && (
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Safaricom Phone Number"
+              type="tel"
+              fullWidth
+              variant="outlined"
+              placeholder="e.g. 0712345678"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              helperText="You will receive an STK prompt on your phone to enter your PIN."
+            />
+          )}
+
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePaymentModal} disabled={processingPayment}>Cancel</Button>
+          <Button onClick={handleProcessPayment} variant="contained" color="success" disabled={processingPayment}>
+            {processingPayment ? 'Processing...' : 'Confirm Payment'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

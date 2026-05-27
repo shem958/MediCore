@@ -37,6 +37,9 @@ public class Invoice {
     @Column(nullable = false)
     private LocalDate dueDate;
 
+    @Column(name = "payment_method")
+    private String paymentMethod; // M-PESA, CASH, INSURANCE, BANK_TRANSFER
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -69,6 +72,8 @@ public class Invoice {
     public void setIssuedDate(LocalDate issuedDate) { this.issuedDate = issuedDate; }
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

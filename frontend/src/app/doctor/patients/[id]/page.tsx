@@ -23,6 +23,8 @@ export default function DoctorPatientView({ params }: { params: { id: string } }
   
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const {
     register,
@@ -39,18 +41,50 @@ export default function DoctorPatientView({ params }: { params: { id: string } }
     }
   }, [isAuthenticated, user, router]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
   const onSubmit = async (data: RecordFormValues) => {
     setError(null);
     setSuccess(false);
+    
+    let uploadedUrl = null;
+
+    if (selectedFile) {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const uploadRes = await api.post('/files/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        uploadedUrl = uploadRes.data.url;
+      } catch (err: any) {
+        setUploading(false);
+        setError(err.response?.data?.message || 'Failed to upload file');
+        return;
+      }
+    }
+
     try {
       await api.post('/records/', {
         patientId: params.id,
+        attachmentUrl: uploadedUrl,
         ...data
       });
       setSuccess(true);
       reset();
+      setSelectedFile(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add medical record');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -97,14 +131,34 @@ export default function DoctorPatientView({ params }: { params: { id: string } }
             rows={4}
             {...register('notes')}
           />
+          
+          <Box mt={2} mb={2}>
+            <Typography variant="subtitle2" gutterBottom>
+              Attach File (X-Ray, Lab Result, etc.)
+            </Typography>
+            <input
+              accept="image/*,.pdf"
+              style={{ display: 'none' }}
+              id="raised-button-file"
+              type="file"
+              onChange={handleFileChange}
+            />
+            <label htmlFor="raised-button-file">
+              <Button variant="outlined" component="span" disabled={isSubmitting || uploading}>
+                Choose File
+              </Button>
+            </label>
+            {selectedFile && <Typography variant="body2" sx={{ ml: 2, display: 'inline' }}>{selectedFile.name}</Typography>}
+          </Box>
+
           <Button
             type="submit"
             variant="contained"
             color="primary"
             sx={{ mt: 3 }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || uploading}
           >
-            {isSubmitting ? 'Saving...' : 'Save Record'}
+            {isSubmitting || uploading ? 'Saving...' : 'Save Record'}
           </Button>
         </Box>
       </Paper>

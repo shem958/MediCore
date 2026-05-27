@@ -36,6 +36,9 @@ public class AppointmentController {
     @Autowired
     PatientRepository patientRepository;
 
+    @Autowired
+    com.medicore.backend.services.EmailService emailService;
+
     @PostMapping("/book")
     @PreAuthorize("hasRole('PATIENT')")
     public ResponseEntity<?> bookAppointment(@Valid @RequestBody BookAppointmentRequest request) {
@@ -44,32 +47,42 @@ public class AppointmentController {
 
         Optional<Patient> patientOpt = patientRepository.findByUser(userDetails);
         if (patientOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Patient profile not found. Please update your profile first."));
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Patient profile not found."));
         }
 
         Optional<DoctorSchedule> scheduleOpt = doctorScheduleRepository.findById(request.getScheduleId());
         if (scheduleOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Schedule slot not found."));
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Schedule not found."));
         }
 
         DoctorSchedule schedule = scheduleOpt.get();
+
         if (schedule.isBooked()) {
-            return ResponseEntity.badRequest().body(new MessageResponse("This slot is already booked."));
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: This slot is already booked."));
         }
 
-        // Book the slot
-        schedule.setBooked(true);
-        doctorScheduleRepository.save(schedule);
+        Patient patient = patientOpt.get();
 
-        // Create appointment
         Appointment appointment = new Appointment(
-                patientOpt.get(),
+                patient,
                 schedule.getDoctor(),
                 schedule,
                 "SCHEDULED",
                 request.getReasonForVisit()
         );
+
         appointmentRepository.save(appointment);
+
+        schedule.setBooked(true);
+        doctorScheduleRepository.save(schedule);
+
+        // Send Email
+        String emailBody = String.format("Dear %s,\n\nYour appointment with Dr. %s has been successfully booked for %s.\n\nPlease arrive 15 minutes early.\n\nRegards,\nMediCore Hospital",
+                patient.getUser().getFirstName(),
+                schedule.getDoctor().getLastName(),
+                schedule.getAvailableDate().toString());
+                
+        emailService.sendEmail(patient.getUser().getEmail(), "Appointment Confirmed", emailBody);
 
         return ResponseEntity.ok(new MessageResponse("Appointment booked successfully!"));
     }

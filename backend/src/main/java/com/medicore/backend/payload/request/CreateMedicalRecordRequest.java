@@ -14,6 +14,7 @@ public class CreateMedicalRecordRequest {
 
     private String prescription;
     private String notes;
+    private String attachmentUrl;
 
     public UUID getPatientId() { return patientId; }
     public void setPatientId(UUID patientId) { this.patientId = patientId; }
@@ -23,4 +24,6 @@ public class CreateMedicalRecordRequest {
     public void setPrescription(String prescription) { this.prescription = prescription; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getAttachmentUrl() { return attachmentUrl; }
+    public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
 }
