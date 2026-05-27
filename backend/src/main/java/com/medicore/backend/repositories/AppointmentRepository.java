@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
     List<Appointment> findByPatientIdOrderByScheduleAvailableDateDesc(UUID patientId);
     List<Appointment> findByDoctorIdOrderByScheduleAvailableDateDesc(UUID doctorId);
+    long countByScheduleAvailableDate(java.time.LocalDate date);
 }
